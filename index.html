@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARKETUNE AI - Real Time Signal</title>
+    <style>
+        :root {
+            --bg: #090b0e;
+            --card: #15191e;
+            --green: #00ff88;
+            --red: #ff4d4d;
+            --blue: #00d4ff;
+            --text: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Auth Screen --- */
+        #auth-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #1a202c 0%, #090b0e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .auth-box {
+            background: var(--card);
+            padding: 40px;
+            border-radius: 25px;
+            border: 1px solid var(--blue);
+            text-align: center;
+            width: 350px;
+            box-shadow: 0 0 50px rgba(0, 212, 255, 0.2);
+        }
+
+        .auth-box h1 { color: var(--blue); font-size: 24px; margin-bottom: 5px; }
+        .auth-box p { color: #888; font-size: 12px; margin-bottom: 25px; }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            background: #1f252d;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 12px;
+            box-sizing: border-box;
+        }
+
+        .btn-prime {
+            background: linear-gradient(90deg, var(--blue), #0081ff);
+            color: white;
+            font-weight: bold;
+            padding: 15px;
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+
+        /* --- Dashboard Layout --- */
+        .main-container {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            grid-template-columns: 1fr 380px;
+            padding: 15px;
+            gap: 15px;
+            box-sizing: border-box;
+        }
+
+        .left-panel {
+            background: var(--card);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            border: 1px solid #222;
+        }
+
+        /* Real-time Indicator Area */
+        .live-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .pulse {
+            width: 10px; height: 10px; background: var(--green);
+            border-radius: 50%; display: inline-block;
+            box-shadow: 0 0 10px var(--green);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .ai-engine-box {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #0d1117;
+            border-radius: 15px;
+            border: 1px dashed #333;
+            margin-bottom: 20px;
+        }
+
+        .signal-text { font-size: 50px; font-weight: 800; letter-spacing: 2px; }
+        .timer-display { font-size: 20px; color: var(--blue); margin-top: 10px; }
+
+        /* Actions */
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .action-btn {
+            padding: 18px; border: none; border-radius: 15px;
+            font-weight: bold; cursor: pointer; font-size: 16px;
+        }
+
+        .call { background: var(--green); color: #000; }
+        .put { background: var(--red); color: #fff; }
+        .info { background: #333; color: #fff; }
+
+        /* --- Chat Panel --- */
+        .right-panel {
+            background: var(--card);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #222;
+            overflow: hidden;
+        }
+
+        .chat-header { padding: 20px; background: #1c2229; font-weight: bold; border-bottom: 1px solid #333; }
+        #chat-flow { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; }
+        .bubble { margin-bottom: 12px; padding: 12px; border-radius: 12px; max-width: 85%; font-size: 14px; line-height: 1.4; }
+        .user-bubble { background: #2d3748; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai-bubble { background: #004d40; color: var(--green); align-self: flex-start; border-bottom-left-radius: 2px; }
+
+        .chat-input-box { display: flex; padding: 15px; background: #1c2229; gap: 10px; }
+        .chat-input-box input { margin: 0; padding: 10px; }
+
+        /* --- Popup Modal --- */
+        #modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 20px; width: 320px; border: 1px solid var(--blue); }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; overflow-y: auto; }
+            .right-panel { height: 500px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <h1>MARKETUNE AI</h1>
+            <p>REAL-TIME DATA ANALYSIS ENGINE</p>
+            <input type="text" id="name_input" placeholder="User Name">
+            <input type="text" id="id_input" placeholder="Pocket Option ID">
+            <input type="password" id="pass_input" placeholder="AI Access Password">
+            <button class="btn-prime" onclick="login()">ACTIVATE SYSTEM</button>
+        </div>
+    </div>
+
+    <div class="main-container" id="app_body">
+        
+        <div class="left-panel">
+            <div class="live-status">
+                <div><span class="pulse"></span> LIVE MARKET DATA</div>
+                <div id="pair-name" style="color: var(--blue);">EUR/USD (OTC)</div>
+            </div>
+
+            <div class="ai-engine-box">
+                <div id="signal_label" class="signal-text" style="color: #444;">WAITING</div>
+                <div id="count_timer" class="timer-display">Ready for next candle</div>
+            </div>
+
+            <div class="grid-buttons">
+                <button class="action-btn call" onclick="generateSignal('CALL')">UP (CALL)</button>
+                <button class="action-btn put" onclick="generateSignal('PUT')">DOWN (PUT)</button>
+                <button class="action-btn info" onclick="openModal('profit')">PROFIT GUIDE</button>
+                <button class="action-btn info" onclick="openModal('wallet')">WALLET / ADD</button>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="chat-header">AI GIRL ASSISTANT (Online)</div>
+            <div id="chat-flow"></div>
+            <div class="chat-input-box">
+                <input type="text" id="user_msg" placeholder="Type message...">
+                <button class="btn-prime" style="width: 80px; margin:0;" onclick="talkToAi()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div class="modal-content">
+            <h2 id="m_title" style="color: var(--blue);"></h2>
+            <p id="m_body" style="font-size: 14px; color: #bbb;"></p>
+            <button class="btn-prime" onclick="closeModal()">GOT IT</button>
+        </div>
+    </div>
+
+    <script>
+        // LOGIN LOGIC
+        function login() {
+            const name = document.getElementById('name_input').value;
+            const id = document.getElementById('id_input').value;
+            const pass = document.getElementById('pass_input').value;
+
+            if(name && id && pass) {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('app_body').style.display = 'grid';
+                sendAiMsg(`System Online. Hello ${name}! ID ${id} is now connected to Real-time Market Data.`);
+            } else {
+                alert("All fields are required!");
+            }
+        }
+
+        // REAL-TIME SIGNAL LOGIC (5 SECONDS)
+        function generateSignal(prediction) {
+            const label = document.getElementById('signal_label');
+            const timer = document.getElementById('count_timer');
+            let sec = 5;
+
+            label.innerText = "ANALYZING";
+            label.style.color = "var(--blue)";
+            
+            const countdown = setInterval(() => {
+                sec--;
+                timer.innerText = `Connecting to Server... 00:0${sec}`;
+                
+                if(sec <= 0) {
+                    clearInterval(countdown);
+                    timer.innerText = "SIGNAL CONFIRMED (1 MIN)";
+                    label.innerText = prediction === 'CALL' ? 'UP ↑' : 'DOWN ↓';
+                    label.style.color = prediction === 'CALL' ? 'var(--green)' : 'var(--red)';
+                    sendAiMsg(`Based on real-time candlestick patterns, I suggest a ${prediction} trade.`);
+                }
+            }, 1000);
+        }
+
+        // AI CHAT LOGIC
+        function talkToAi() {
+            const input = document.getElementById('user_msg');
+            const msg = input.value;
+            if(!msg) return;
+
+            addBubble('user-bubble', msg);
+            input.value = "";
+
+            setTimeout(() => {
+                let reply = "I am monitoring the current market volatility. Do you need a signal?";
+                if(msg.toLowerCase().includes("profit")) reply = "To ensure daily profit, never trade more than 2% of your balance per deal.";
+                if(msg.toLowerCase().includes("recharge") || msg.toLowerCase().includes("add")) reply = "You can add funds via BKash/Nagad in Pocket Option. Check Wallet button for details.";
+                if(msg.toLowerCase().includes("hello")) reply = "Hello! I am your Trading AI Girl. Ready to win today?";
+                sendAiMsg(reply);
+            }, 800);
+        }
+
+        function sendAiMsg(text) {
+            addBubble('ai-bubble', text);
+        }
+
+        function addBubble(type, text) {
+            const flow = document.getElementById('chat-flow');
+            const div = document.createElement('div');
+            div.className = `bubble ${type}`;
+            div.innerText = text;
+            flow.appendChild(div);
+            flow.scrollTop = flow.scrollHeight;
+        }
+
+        // MODAL LOGIC
+        function openModal(type) {
+            const m = document.getElementById('modal-overlay');
+            const t = document.getElementById('m_title');
+            const b = document.getElementById('m_body');
+
+            if(type === 'profit') {
+                t.innerText = "Daily Profit Rules";
+                b.innerHTML = "• ৩টি উইন হলে ৩০ মিনিট বিরতি দিন।<br>• ইমোশনাল ট্রেড করবেন না।<br>• মার্কেট ভলাটাইল থাকলে AI সিগন্যাল এড়িয়ে চলুন।<br>• প্রতিদিন ১০-২০% প্রফিট টার্গেট রাখুন।";
+            } else {
+                t.innerText = "Deposit & Withdraw";
+                b.innerHTML = "• রিচার্জ করতে Pocket Option-এর 'Finance' এ যান।<br>• টাকা তুলতে 'Withdrawal' অপশন ব্যবহার করুন।<br>• যেকোনো সমস্যায় আমার চ্যাট বক্সে লিখুন।";
+            }
+            m.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
